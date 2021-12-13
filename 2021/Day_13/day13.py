@@ -99,8 +99,9 @@ def calc_result2(my_array, instructions):
 
 
 def nice_print(my_array):
+    translate = {1: '█', 0:' '}
     for row in my_array:
-        print(''.join([str(num) for num in row]))
+        print(''.join([translate[num] for num in row]))
 
 
 def main():

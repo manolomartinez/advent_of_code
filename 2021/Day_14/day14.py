@@ -19,7 +19,7 @@ def parse_template(line):
 
 
 def parse_insertion(line):
-    pair, insertion = line.strip().split(' -> ')
+    pair, insertion = line.strip().split(" -> ")
     return pair, insertion
 
 
@@ -37,8 +37,12 @@ def step(template, insertions):
     offset = 0
     for i in range(len(template)):
         try:
-            to_insert = insertions[template[i:i+2]]
-            new_template = new_template[:i+1 + offset] + to_insert + new_template[i+1 + offset:]
+            to_insert = insertions[template[i : i + 2]]
+            new_template = (
+                new_template[: i + 1 + offset]
+                + to_insert
+                + new_template[i + 1 + offset :]
+            )
             offset += 1
         except:
             pass
@@ -51,13 +55,15 @@ def run(template, insertions, steps=10):
     counts = Counter(template)
     return counts.most_common()[0][1] - counts.most_common()[-1][1]
 
+
 # Second star
+
 
 def insertions_to_pairs(insertions):
     pairs = {}
     for k in insertions:
         insert = insertions[k]
-        v = [''.join([k[0] + insert]), ''.join([insert + k[1]])]
+        v = ["".join([k[0] + insert]), "".join([insert + k[1]])]
         pairs[k] = v
     return pairs
 
@@ -65,7 +71,7 @@ def insertions_to_pairs(insertions):
 def template_to_pairs(template):
     template_dict = defaultdict(int)
     for i in range(len(template) - 1):
-        template_dict[template[i:i+2]] += 1
+        template_dict[template[i : i + 2]] += 1
     return template_dict
 
 
@@ -97,7 +103,7 @@ def calc_result(template_dict, template):
     for elem in frequencies:
         frequencies[elem] /= 2
     return int(max(frequencies.values()) - min(frequencies.values()))
-        
+
 
 def main():
     input_type = argv[-1] + ".txt"

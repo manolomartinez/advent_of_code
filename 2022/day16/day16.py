@@ -1,5 +1,5 @@
 from itertools import product, filterfalse
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from bisect import insort
 
 # Solutions:
@@ -24,8 +24,39 @@ def create_cave(lines):
     cave = [dict(), dict()]
     for rate, tunnels in lines:
         cave[0][rate[0]] = rate[1]
-        cave[1][tunnels[0]] = tunnels[1]
+        cave[1][tunnels[0]] = {(tunnel, 1) for tunnel in tunnels[1]}
     return cave
+
+
+## I need to parse the input more intelligently: rate 0 valves should just be
+## bypassed, and the time needed to reach the following valve be 2 minutes
+
+
+def optimize_cave(cave):
+    rates, original_tunnels = cave
+    optimized_tunnels = defaultdict(set)
+    done = False
+    while not done:
+        for tunnel in original_tunnels:
+            for next_tunnel in original_tunnels[tunnel]:
+                actual_next, minutes = next_tunnel
+                if rates[actual_next] == 0 and actual_next != "AA":
+                    for following_tunnel in original_tunnels[actual_next]:
+                        if following_tunnel[0] != tunnel:
+                            optimized_tunnels[tunnel].add(
+                                (following_tunnel[0], minutes + 1)
+                            )
+                else:
+                    optimized_tunnels[tunnel].add((next_tunnel[0], minutes))
+        done = optimized_tunnels == original_tunnels
+        original_tunnels = optimized_tunnels.copy()
+        optimized_tunnels = defaultdict(set)
+    final_tunnels = dict(
+        (tunnel, tunnels)
+        for tunnel, tunnels in original_tunnels.items()
+        if rates[tunnel] != 0 or tunnel == "AA"
+    )
+    return rates, final_tunnels
 
 
 def release(rates, opened):
@@ -38,8 +69,6 @@ def release(rates, opened):
 
 def navigate(cave):
     rates, tunnels = cave
-    all_tunnels = set(tunnels.keys())
-    maxtunnels = len(all_tunnels)
     runs = [[set(["AA"]), "AA", [0], defaultdict(bool), 0]]
     # a set of tunnels visited so far, the last visited, a list of pressure released at each step,
     # a list of open valves, and a counter of minutes passed
@@ -52,11 +81,11 @@ def navigate(cave):
             # print(visited)
             for tunnel in tunnels[last]:
                 new_visited = visited.copy()
-                new_visited.add(tunnel)
-                new_minutes = minutes + 1
-                new_released = released + [released[-1] + release(rates, opened)]
-                candidate = [new_visited, tunnel, new_released, opened, new_minutes]
-                if not vet(new_runs, candidate):
+                new_visited.add(tunnel[0])
+                new_minutes = minutes + tunnel[1]
+                new_released = released + [released[-1] + release(rates, opened) * tunnel[1]]
+                candidate = [new_visited, tunnel[0], new_released, opened, new_minutes]
+                if not worse(candidate, new_runs):
                     if new_minutes >= 30:
                         if new_released[-1] > max_release and new_minutes == 30:
                             max_release = new_released[-1]
@@ -67,21 +96,21 @@ def navigate(cave):
                         for run in prev_runs:
                             if not vet2(candidate, run):
                                 new_runs.append(run)
-                if rates[tunnel] and not opened[tunnel]:
+                if rates[tunnel[0]] and not opened[tunnel[0]]:
                     new_opened = opened.copy()
-                    new_opened[tunnel] = True
+                    new_opened[tunnel[0]] = True
                     new_minutes += 1
                     new_released = new_released + [
                         new_released[-1] + release(rates, opened)
                     ]
                     candidate = [
                         new_visited,
-                        tunnel,
+                        tunnel[0],
                         new_released,
                         new_opened,
                         new_minutes,
                     ]
-                if not vet(new_runs, candidate):
+                if not worse(candidate, new_runs):
                     if new_minutes >= 30:
                         if new_released[-1] > max_release and new_minutes == 30:
                             max_release = new_released[-1]
@@ -98,7 +127,7 @@ def navigate(cave):
     return max_release
 
 
-def vet(runs, candidate):
+def worse(candidate, runs):
     visited, last, released, opened, minutes = candidate
     for run in runs:
         if (
@@ -114,9 +143,6 @@ def vet(runs, candidate):
             and minutes >= run[4]
         ):
             return True
-        # if booleans[-1]:
-        # print(f"candidate: {candidate}")
-        # print(f"previous: {run}")
     return False
 
 
@@ -135,5 +161,4 @@ def vet2(new, old):
         and old[4] >= minutes
     ):
         return True
-        # if booleans[-1]:
     return False

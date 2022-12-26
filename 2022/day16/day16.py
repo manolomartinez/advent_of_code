@@ -1,7 +1,5 @@
-from itertools import pairwise, product
-from collections import OrderedDict, defaultdict
-from bisect import insort
 from copy import deepcopy
+from itertools import permutations
 
 # Solutions:
 # result1("input.txt")
@@ -46,9 +44,6 @@ def optimize_cave(cave):
                                 original_tunnels[tunnel][next_tunnel]
                                 + original_tunnels[next_tunnel][following_tunnel]
                             )
-                    # del optimized_tunnels[tunnel][next_tunnel]
-                # else:
-                #    optimized_tunnels[tunnel].add((next_tunnel[0], minutes))
         done = optimized_tunnels == original_tunnels
         original_tunnels = deepcopy(optimized_tunnels)
     prefinal_tunnels = dict(
@@ -62,14 +57,6 @@ def optimize_cave(cave):
             if rates[next_tunnel] == 0 and next_tunnel != "AA":
                 del final_tunnels[tunnel][next_tunnel]
     return rates, final_tunnels
-
-
-def release(rates, opened):
-    total = 0
-    for tunnel in rates:
-        if opened[tunnel]:
-            total += rates[tunnel]
-    return total
 
 
 def all_paths(cave):
@@ -107,65 +94,94 @@ def all_paths(cave):
     return optimized_routes
 
 
-path_values = {}
+def available(current, total):
+    return (elem for elem in total if not elem in current)
 
 
-def path_value(distances, rates, path):
-    if tuple(path) in path_values:
-        return path_values[tuple(path)]
-    else:
-        value = 0
-        time = 0
-        for first, second in pairwise(path):
-            time += distances[second][first] + 1
-            if time > 30:
-                return 0
-            else:
-                value += rates[second] * (30 - time)
-        path_values[tuple(path)] = value
-        return value
+def brute_force(distances, rates):
+    all_tunnels = list(distances.keys())
+    max_value = 0
+    # import pdb; pdb.set_trace()
+    branches = [[["AA"], 0, 0]]
+    while len(branches) > 0:
+        path, time, value = branches.pop()
+        for tunnel in available(path, all_tunnels):
+            new_path = path.copy()
+            new_path.append(tunnel)
+            new_time = time + distances[path[-1]][tunnel] + 1
+            new_value = value + rates[tunnel] * (30 - new_time)
+            if new_time <= 30:
+                if new_value > max_value:
+                    max_value = new_value
+                    # print(max_value)
+                    # print(new_path)
+            if new_time < 30 and set(new_path) != set(all_tunnels):
+                branches.append([new_path, new_time, new_value])
+                # print(new_path, new_time, new_value)
+    return max_value
 
 
-def insert_or_append(mylist, value, index):
-    if index != "a":
-        mylist.insert(index, value)
-    else:
-        mylist.append(value)
+def result1(myinput):
+    lines = read_input(myinput)
+    pre_cave = create_cave(lines)
+    cave = optimize_cave(pre_cave)
+    distances = all_paths(cave)
+    rates, _ = cave
+    value = brute_force(distances, rates)
+    return value
 
 
-def greedy_add(distances, rates, path=["AA"]):
-    available = list(distances.keys())
-    for tunnel in path:
-        available.remove(tunnel)
-    path_sequence = [path]
-    available_sequence = [available]
-    # import pdb
+def brute_force2(distances, rates):
+    all_tunnels = list(distances.keys())
+    max_value = 0
+    branches = [[["AA"], ["AA"], 0, 0, 0, 0]]
+    while len(branches) > 0:
+        path_h, path_e, time_h, value_h, time_e, value_e = branches.pop()
+        for tunnel_h, tunnel_e in permutations(
+            available(path_h + path_e, all_tunnels), r=2
+        ):
+            # Santa moves
+            new_path_h = path_h.copy()
+            new_path_h.append(tunnel_h)
+            new_time_h = time_h
+            new_time_h += distances[path_h[-1]][tunnel_h] + 1
+            new_value_h = value_h
+            if new_time_h <= 26:
+                new_value_h += rates[tunnel_h] * (26 - new_time_h)
+            # the elephant moves
+            new_path_e = path_e.copy()
+            new_path_e.append(tunnel_e)
+            new_time_e = time_e
+            new_time_e += distances[path_e[-1]][tunnel_e] + 1
+            new_value_e = value_e
+            if new_time_e <= 26:
+                new_value_e += rates[tunnel_e] * (26 - new_time_e)
+            if new_time_h <= 26 or new_time_e <= 26:
+                if new_value_e + new_value_h > max_value:
+                    max_value = new_value_e + new_value_h
+            if (
+                new_time_h < 26
+                and new_time_e < 26
+                and set(new_path_e + new_path_h) != set(all_tunnels)
+            ):
+                branches.append(
+                    [
+                        new_path_h,
+                        new_path_e,
+                        new_time_h,
+                        new_value_h,
+                        new_time_e,
+                        new_value_e,
+                    ]
+                )
+    return max_value
 
-    # pdb.set_trace()
-    overall_max_value = 0
-    while len(available) > 0:
-        current_path = []
-        max_value = 0
-        value_candidates = []
-        path_candidates = []
-        print(f"path before: {path}")
-        for tunnel, index in product(available, list(range(1, len(path))) + ["a"]):
-            path_candidate = path.copy()
-            insert_or_append(path_candidate, tunnel, index)
-            path_candidates.append(path_candidate.copy())
-            # print(f"path_candidate: {path_candidate}")
-            value_candidates.append(path_value(distances, rates, path_candidate))
-            # print(f"value_candidate: {value_candidate}")
-        max_value = max(value_candidates)
-        if max_value == 0:
-            path_values[tuple(path)] = 0
-        else:
-            current_path = path_candidates[value_candidates.index(max_value)]
-            #print(f"current_path: {current_path}")
-            print(max_value)
-            path = current_path.copy()
-            if max_value > overall_max_value:
-                overall_max_value = max_value
-        print(f"path after: {path}")
-        available = [tunnel for tunnel in available if not tunnel in path]
-    return path, overall_max_value
+
+def result2(myinput):
+    lines = read_input(myinput)
+    pre_cave = create_cave(lines)
+    cave = optimize_cave(pre_cave)
+    distances = all_paths(cave)
+    rates, _ = cave
+    value = brute_force2(distances, rates)
+    return value

@@ -1,78 +1,48 @@
 a ← •Import "../../../Project Euler/aux.bqn"
 m ← •Import "/home/manolo/Software/BQN_cosas/bqn-libs/matrix.bqn"
-g←(⊑¨•HashMap 1⊸⊑¨)((¯1↓⊑)⋈1⊸↓)¨' '⊸a.Split¨ •FLines "./input.txt" # graph
-
-#g←(⊑¨•HashMap 1⊸⊑¨)((¯1↓⊑)⋈1⊸↓)¨' '⊸a.Split¨ •FLines "./test2.txt" # graph
-"out" g.Set ⟨⟩
-
-p ← t •Hashmap k⊸{𝕩/𝕨}¨ <˘⍉ c {∨´𝕩⊸≡¨𝕨}⌜ t ← ⍷∾´ c← g.Get¨ k←g.Keys 0 # parents
-{c ← g.Get 𝕩⋄𝕩 g.Set 0⋈c }¨g.Keys 0 # add a counter
-#{n‿c←g.Get 𝕩⋄nc←≠p.Get 𝕩⋄𝕩 g.Set ⟨nc+n,c⟩}¨ p.Keys 0
-"you" g.Set 1⋈1⊑ g.Get "you"
-Add ← { # Add your distance to your children
-  d‿c←g.Get 𝕩 # distance and children
-  {d2‿c2←g.Get 𝕩⋄𝕩 g.Set (d+d2)⋈c2}¨c
-}
-
-Step ← {
-  Add¨𝕩
-  ⍷∾´1⊸⊑¨g.Get¨𝕩
-}
-
-Step•_while_(0<≠) ⋈"you"
-•Show ⊑g.Get "out" # Part 1
-Paths ← {
+G ← {
 # Create the graph, using 𝕩 as starting node
-  #g←(⊑¨•HashMap 1⊸⊑¨)((¯1↓⊑)⋈1⊸↓)¨' '⊸a.Split¨ •FLines "./input.txt" # graph
-  g←(⊑¨•HashMap 1⊸⊑¨)((¯1↓⊑)⋈1⊸↓)¨' '⊸a.Split¨ •FLines "./test3.txt" # graph
-  "out" g.Set ⟨⟩
-  {c ← g.Get 𝕩⋄𝕩 g.Set 0⋈c }¨g.Keys 0 # add a counter
-  𝕩 g.Set 1⋈1⊑ g.Get 𝕩
+# g is the graph as a hashmap, to each node corresponds a list of children, a
+# list of parents, a distance, and a list of parents that have already shared
+# their message
+  aux ← •Hashmap´((¯1↓⊑)¨⋈1⊸↓¨)' '⊸a.Split¨ •FLines "./input.txt"
+  aux.Keys 0
+  aux.Get¨ aux.Keys 0
+  "out" aux.Set ⟨⟩
+  r ← ⟨⟩ # relevant nodes, we will delete the rest
+  {o←⍷∾´aux.Get¨ 𝕩⋄r↩⍷r∾o⋄o}•_while_(0<≠) ⋈𝕩 # relevant nodes
+  r ⟨𝕩⟩⊸∾↩
+  n‿c ←  ⟨r,aux.Get¨r⟩ # nodes, children
+  p←n⊸{𝕩/𝕨}¨<˘⍉c{∨´𝕩⊸≡¨𝕨}⌜n # parents
+  g←n•Hashmap(c⋈¨p)∾¨<⟨0,⟨⟩⟩ 
+  𝕩 g.Set ⟨(⊑g.Get 𝕩),⟨"dummy"⟩,1,⟨"dummy"⟩⟩
   g
 }
-Add2 ← { 
+Add ← { 
   # Add your distance to your children in graph 𝕨
   g𝕊n: # graph and node
-  d‿c←g.Get n # distance and children
-  {d2‿c2←g.Get 𝕩⋄𝕩 g.Set (d+d2)⋈c2}¨c
+  n
+  c‿p‿d‿v←g.Get n # distance and children
+  {c2‿p2‿d2‿v2←g.Get 𝕩⋄𝕩 g.Set (⋈c2)∾(⋈p2)∾(d+d2)∾(⋈⍷v2∾⋈n)}¨c
+  n g.Set ⟨c,p,d,⟨⟩⟩
 }
-
-Step2 ← {
-  # Step in graph 𝕨
-  𝕨⊸Add2¨𝕩
-  •Show 𝕨.Get¨ 𝕨.Keys 0
-  •Show ⍷∾´1⊸⊑¨𝕨.Get¨𝕩
+Msg ← {
+  # A node 𝕩 sends its distance to its children in graph 𝕨, but only if 𝕩 has
+  # received every distance from its parents alrçeady
+  c‿p‿d‿v ← 𝕨.Get 𝕩
+  (∧´p∊v)◶⟨⊢,𝕨⊸Add⟩ 𝕩 # Has the node received all message from parents?
+  ⍷c
 }
-
-Step3 ← {
-  # Step in graph 𝕨
-  g𝕊n: #graph and node
-  d‿c←(⊑¨⋈1⊸⊑¨)g.Get¨n # original distances and sets of children
-  d{od𝕊sc:{d2‿c2←g.Get 𝕩⋄𝕩 g.Set (od+d2)⋈c2}¨sc}¨c
-  •Show 𝕨.Get¨ 𝕨.Keys 0
-  •Show ⍷∾´1⊸⊑¨𝕨.Get¨𝕩
-}
-
-svr ← Paths "svr"
-svr.Get "fft"
-dac ← Paths "dac"
-dac.Get "fft"
-fft ← Paths "fft"
-fft.Get "out"
-
-
-•Show svr.Get¨ svr.Keys 0
-svr⊸Step3•_while_(0<≠) ⋈"svr"
-dac⊸Step3•_while_(0<≠) ⋈"dac"
-fft⊸Step3•_while_(0<≠) ⋈"fft"
-sd←⊑svr.Get "dac"
-sf←⊑svr.Get "fft"
-fd←⊑fft.Get "dac"
-df←⊑dac.Get "fft"
-do←⊑dac.Get "out"
-fo←⊑fft.Get "out"
-
-sf
-do
-×´sf‿fd‿do
-a.Mult´ a.NumtoList¨ sf‿fd‿do
+you ← G "you"
+you⊸(∾´Msg¨)•_while_(0<≠) ⋈"you"
+•Show 2⊑you.Get "out" # part 1
+svr ← G "svr"
+dac ← G "dac"
+fft ← G "fft"
+{⍷∾´svr⊸Msg¨𝕩}•_while_(0<≠) ⋈"svr"
+{⍷∾´dac⊸Msg¨𝕩}•_while_(0<≠) ⋈"dac"
+{⍷∾´fft⊸Msg¨𝕩}•_while_(0<≠) ⋈"fft"
+sf←2⊑svr.Get "fft"
+fd←2⊑fft.Get "dac"
+do←2⊑dac.Get "out"
+•Show sf×fd×do # part 2

@@ -10,12 +10,11 @@ z‿c (aa ≥ n)⊸/¨ ↩
 
 # Now I calculate the more or less trivial problems (those that have enough
 # space to simply put the 3x3 presents side by side, without fitting)
-
-(×´¨z) ≥¨ +´¨(6/⋈9)⊸×¨c
+(≠z)=+´(×´¨z) ≥¨ +´¨(6/⋈9)⊸×¨c
 # So, it seems that rectangular packing should be enough for many of these
 # problems, or all.
 
-# Do the total number of presents (I'm going to think of them as equal rectangles
+# Do the total number of presents (I'm going to think of them as equal squares
 # for the time being) fit?
 •Show +´ (×´¨⌊¨¨÷⟜3¨¨z) ≥ +´¨c # part 1
 
